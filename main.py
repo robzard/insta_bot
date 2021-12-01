@@ -1,4 +1,4 @@
-from DataBase import db
+from db_structure.DataBase import db
 from Distributor import *
 
 
@@ -11,8 +11,8 @@ if __name__ == '__main__':
 
     ds = Distributor(db_ps)
     ds.registration_tasks()
-    ds.docker_run_containers()
+    #ds.docker_run_containers()
 
-    db_ps.cn.close()
-    db_ps.cursor.close()
+    # db_ps.cn.close()
+    # db_ps.cursor.close()
 

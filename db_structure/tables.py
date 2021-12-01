@@ -18,10 +18,11 @@ class Task(Base):
     username = Column(String(64), nullable=False)
     id_username = Column(Integer, nullable=True)
     username_worker = Column(String(64), nullable=True)
+    id_username_parent = Column(Integer, ForeignKey('accounts.id'), nullable=True)
     result_data_json = Column(JSON, nullable=True)
     log_error = Column(String(1024), nullable=True)
 
-    children = relationship("TypeTask", back_populates="parent")
+    #children = relationship("AccountSettings", back_populates="parent")
 
 
 class Account(Base):
@@ -30,17 +31,18 @@ class Account(Base):
     type_id = Column(Integer, ForeignKey('types_account.id'), nullable=False)
     username = Column(String(64), nullable=False)
     password = Column(String(64), nullable=False)
-    proxy = Column(String(256), nullable=False)
-    user_agent = Column(String(4028), nullable=False)
+    proxy = Column(String(256), nullable=True)
+    user_agent = Column(String(4028), nullable=True)
     active = Column(Integer, nullable=False)
-    comment = Column(String(4028), nullable=False)
+    comment = Column(String(4028), nullable=True)
+    account_settings = relationship("AccountSettings", uselist=False, backref="accounts")
+    tasks = relationship("Task", uselist=True, backref="accounts")
 
 
 class TypeTask(Base):
     __tablename__ = 'types_task'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(64), nullable=False)
-    parent = relationship("Task", back_populates="children")
 
 
 class Status(Base):
@@ -55,3 +57,8 @@ class TypeAccount(Base):
     name = Column(String(64), nullable=False)
 
 
+class AccountSettings(Base):
+    __tablename__ = 'account_settings'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    id_account = Column(Integer, ForeignKey('accounts.id'), nullable=False)
+    source_accounts = Column(String(1024), nullable=False)
