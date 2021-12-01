@@ -4,6 +4,11 @@ from psycopg2._psycopg import connection, cursor
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from config import *
 
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, String, Integer, create_engine, select
+from db_structure.tables import Base, Task, Status, Account, TypeAccount, TypeTask
+
 
 def create_database():
     try:
@@ -29,22 +34,60 @@ def create_database():
 class db(object):
     def __init__(self):
         create_database()
-        self.cn: connection = psycopg2.connect(user=PS_USER,
-                                               password=PS_PASS,
-                                               host=PS_HOST,
-                                               port=PS_PORT,
-                                               database=PS_DATABASE)
-        self.cursor: cursor = self.cn.cursor()
+        self.conn = f"postgresql+psycopg2://{PS_USER}:{PS_PASS}@{PS_HOST}:{PS_PORT}/{PS_DATABASE}"
+        self.engine = create_engine(self.conn, encoding='UTF-8',
+                                    echo=False)
+        # Удалить таблицу данных отображения (если она существует)
+        Base.metadata.drop_all(self.engine)
+        # Создать таблицу данных отображения (если она не существует)
+        Base.metadata.create_all(self.engine)
+        Session = sessionmaker(bind=self.engine)
+        self.session = Session()
+        self.add_data_on_creation()
 
-    def execute(self, sql):
-        self.cursor.execute(sql)
-        self.cn.commit()
+    def add_data_on_creation(self):
+        type_task: select = self.session.execute(select(TypeTask))
+        status: select = self.session.execute(select(TypeTask))
+        type_account: select = self.session.execute(select(TypeTask))
 
-    def select(self, sql):
-        self.cursor.execute(sql)
-        record = self.cursor.fetchall()
-        return record
+        if type_task.raw.rowcount == 0:
+            self.session.add(TypeTask(name="Выгрузить подписчиков"))
+            self.session.add(TypeTask(name="Проверка на бота"))
+            self.session.add(TypeTask(name="Выгрузка информации аккаунта"))
+        if status.raw.rowcount == 0:
+            self.session.add(Status(name="Выполнено"))
+            self.session.add(Status(name="Ошибка"))
 
-    def insert(self, insert_query, items):
-        self.cursor.execute(insert_query, items)
-        self.cn.commit()
+        if type_account.raw.rowcount == 0:
+            self.session.add(TypeAccount(name="Человек"))
+            self.session.add(TypeAccount(name="Бот"))
+
+        self.session.commit()
+
+
+
+
+
+
+# class db(object):
+#     def __init__(self):
+#         create_database()
+#         self.cn: connection = psycopg2.connect(user=PS_USER,
+#                                                password=PS_PASS,
+#                                                host=PS_HOST,
+#                                                port=PS_PORT,
+#                                                database=PS_DATABASE)
+#         self.cursor: cursor = self.cn.cursor()
+#
+#     def execute(self, sql):
+#         self.cursor.execute(sql)
+#         self.cn.commit()
+#
+#     def select(self, sql):
+#         self.cursor.execute(sql)
+#         record = self.cursor.fetchall()
+#         return record
+#
+#     def insert(self, insert_query, items):
+#         self.cursor.execute(insert_query, items)
+#         self.cn.commit()
