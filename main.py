@@ -1,11 +1,6 @@
 from db_structure.DataBase import db
 from Distributor import *
 
-
-def print_hi(name):
-    print(f'Hi, {name}')
-
-
 if __name__ == '__main__':
     db_ps = db()
 

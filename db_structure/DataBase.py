@@ -1,13 +1,17 @@
+from datetime import datetime, timedelta
+
 import psycopg2
 from psycopg2 import Error
 from psycopg2._psycopg import connection, cursor
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 from config import *
 
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, lazyload
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, String, Integer, create_engine, select
+from sqlalchemy import Column, String, Integer, create_engine, select, func, literal_column, extract, cast, TIMESTAMP, \
+    and_
 from db_structure.tables import Base, Task, Status, Account, TypeAccount, TypeTask, AccountSettings
+from sqlalchemy import select, func, distinct, extract, text
 
 
 def create_database():
@@ -36,14 +40,21 @@ class db(object):
         create_database()
         self.conn = f"postgresql+psycopg2://{PS_USER}:{PS_PASS}@{PS_HOST}:{PS_PORT}/{PS_DATABASE}"
         self.engine = create_engine(self.conn, encoding='UTF-8', echo=False)
-        Base.metadata.drop_all(self.engine)  # удаление
+        # Base.metadata.drop_all(self.engine)  # удаление
         Base.metadata.create_all(self.engine)  # создание
         Session = sessionmaker(bind=self.engine)
         self.session = Session()
         self.add_data_on_creation()
 
-        #a = self.session.query(Account).filter(Account.username.like('%4%')).all()
-        print("1")
+        # accounts = self.session.query(Account.id, func.count(Task.id)).outerjoin(self.session.query(
+        # Task.id).filter(Task.date_add > date).filter(Task.type_id == 1)).group_by(Account.id).all()#.having(
+        # func.count(Task.id) == 0).all() accounts = self.session.query(Account).select_from(Account).join(
+        # Task).filter(func.trunc(Task.date_add, date) > 12).all()  #.filter(extract('day', Task.date_add) < 3).all()
+
+        # a = self.session.query(Account).filter(func.count(Account.tasks) >= 1).all()
+        # Account.tasks.append()
+        # print("1")
+
         # data: Account = self.session.query(Account).first()
         # print(data.settings.source_accounts)
         # for acc in data.scalars().all():
@@ -67,29 +78,32 @@ class db(object):
             self.session.add(TypeAccount(name="Бот"))
             self.session.commit()
             self.session.add(Account(
-                    type_id=1,
-                    username='4ch.bst',
-                    password='Zima2021',
-                    proxy='-',
-                    user_agent='-',
-                    active=1,
-                    comment='-'))
+                type_id=1,
+                username='4ch.bst',
+                password='Zima2021',
+                proxy='-',
+                user_agent='-',
+                active=1,
+                comment='-'))
             self.session.add(AccountSettings(id_account=1,
                                              source_accounts='4chan__tv;4chngirl;4chantv2.0;4changirl_ua;4chan_inc;4chtg;4ch.bitch;4chan.vid;4chantg'))
         self.session.commit()
 
-
     def get_accounts_for_registration(self):
-        return self.session.query(Account)  # .filter(Account.username.like('4'))
+        accounts = []
+        date = datetime.now() - timedelta(hours=24)
+        for acc in self.session.query(Account).all():
+            tasks_today = acc.tasks.filter(and_(Task.date_add > date, Task.type_id == 1)).all()
+            if len(tasks_today) == 0:
+                accounts.append(acc)
+        return accounts
 
     def create_tasks(self, account: Account, source_accounts: list):
         for username in source_accounts:
             task = Task(type_id=1,
                         status_id=1,
                         username=username,
-                        id_username_parent=account.id,)
+                        id_username_parent=account.id,
+                        date_add=datetime.now())
             self.session.add(task)
         self.session.commit()
-
-
-
