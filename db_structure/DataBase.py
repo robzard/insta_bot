@@ -9,12 +9,14 @@ from config import *
 from sqlalchemy.orm import sessionmaker, lazyload
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Integer, create_engine, select, func, literal_column, extract, cast, TIMESTAMP, \
-    and_
+    and_, update
 from db_structure.tables import Base, Task, Status, Account, TypeAccount, TypeTask, AccountSettings
 from sqlalchemy import select, func, distinct, extract, text
 
 
-def create_database():
+def create_database(is_bot: bool = False):
+    if is_bot:
+        return
     try:
         cn = psycopg2.connect(user=PS_USER,
                               password=PS_PASS,
@@ -36,11 +38,12 @@ def create_database():
 
 
 class db(object):
-    def __init__(self):
-        create_database()
+    def __init__(self, is_bot: bool = False):
+        self.is_bot = is_bot
+        create_database(self.is_bot)
         self.conn = f"postgresql+psycopg2://{PS_USER}:{PS_PASS}@{PS_HOST}:{PS_PORT}/{PS_DATABASE}"
         self.engine = create_engine(self.conn, encoding='UTF-8', echo=False)
-        # Base.metadata.drop_all(self.engine)  # удаление
+        #Base.metadata.drop_all(self.engine)  # удаление
         Base.metadata.create_all(self.engine)  # создание
         Session = sessionmaker(bind=self.engine)
         self.session = Session()
@@ -81,8 +84,6 @@ class db(object):
                 type_id=1,
                 username='4ch.bst',
                 password='Zima2021',
-                proxy='-',
-                user_agent='-',
                 active=1,
                 comment='-'))
             self.session.add(AccountSettings(id_account=1,
@@ -107,3 +108,12 @@ class db(object):
                         date_add=datetime.now())
             self.session.add(task)
         self.session.commit()
+
+    def get_bot_account(self):
+        return self.session.query(Account).filter(and_())
+
+    def get_task(self):
+        task: Task = self.session.query(Task).with_for_update().filter(Task.status_id == 1).first()
+        task.status_id = 2
+        self.session.commit()
+        return task

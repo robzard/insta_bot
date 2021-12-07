@@ -21,7 +21,7 @@ class Task(Base):
     username_worker = Column(String(64), nullable=True)
     id_username_parent = Column(Integer, ForeignKey('accounts.id'), nullable=False)
     result_data_json = Column(JSON, nullable=True)
-    log_error = Column(String(1024), nullable=True)
+    log_error = Column(String(), nullable=True)
 
     # children = relationship("AccountSettings", back_populates="parent")
 
@@ -32,12 +32,19 @@ class Account(Base):
     type_id = Column(Integer, ForeignKey('types_account.id'), nullable=False)
     username = Column(String(64), nullable=False)
     password = Column(String(64), nullable=False)
-    proxy = Column(String(256), nullable=True)
-    user_agent = Column(String(4028), nullable=True)
+    proxy_id = Column(Integer, ForeignKey('proxy.id'), nullable=True)
+    user_agent_id = Column(Integer, ForeignKey('user_agents.id'), nullable=True)
+    work_now = Column(Integer, nullable=True)
     active = Column(Integer, nullable=False)
-    comment = Column(String(4028), nullable=True)
+    comment = Column(String(), nullable=True)
     account_settings = relationship("AccountSettings", uselist=False, backref="accounts")
+    log_error = Column(String(), nullable=True)
+    count_requests = Column(Integer, nullable=True)
+    date_last_request = Column(DateTime, nullable=True)
+
     tasks = relationship("Task", uselist=True, backref="accounts", lazy="dynamic")
+    proxy = relationship("Proxy", backref="accounts")
+    user_agent = relationship("UserAgent", backref="accounts")
 
 
 class TypeTask(Base):
@@ -76,3 +83,21 @@ class AccountSettings(Base):
     def __init__(self, id_account: int, source_accounts: str):
         self.id_account = id_account
         self.source_accounts = source_accounts
+
+
+class Proxy(Base):
+    __tablename__ = 'proxy'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    proxy_value = Column(String(512), nullable=False)
+
+    def __init__(self, proxy_value: str):
+        self.proxy_value = proxy_value
+
+
+class UserAgent(Base):
+    __tablename__ = 'user_agents'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_agent_value = Column(String(), nullable=False)
+
+    def __init__(self, user_agent_value: str):
+        self.proxy_value = user_agent_value
