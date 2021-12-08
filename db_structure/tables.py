@@ -32,19 +32,18 @@ class Account(Base):
     type_id = Column(Integer, ForeignKey('types_account.id'), nullable=False)
     username = Column(String(64), nullable=False)
     password = Column(String(64), nullable=False)
-    proxy_id = Column(Integer, ForeignKey('proxy.id'), nullable=True)
-    user_agent_id = Column(Integer, ForeignKey('user_agents.id'), nullable=True)
     work_now = Column(Integer, nullable=True)
     active = Column(Integer, nullable=False)
     comment = Column(String(), nullable=True)
-    account_settings = relationship("AccountSettings", uselist=False, backref="accounts")
     log_error = Column(String(), nullable=True)
+    user_agent_id = Column(Integer, ForeignKey('user_agents.id'), nullable=True)
     count_requests = Column(Integer, nullable=True)
     date_last_request = Column(DateTime, nullable=True)
 
+    account_settings = relationship("AccountSettings", uselist=False, backref="accounts")
     tasks = relationship("Task", uselist=True, backref="accounts", lazy="dynamic")
-    proxy = relationship("Proxy", backref="accounts")
-    user_agent = relationship("UserAgent", backref="accounts")
+    proxy = relationship("Proxy", uselist=False, backref="accounts")
+    user_agent = relationship("UserAgent", uselist=False, backref="user_agents")
 
 
 class TypeTask(Base):
@@ -86,9 +85,10 @@ class AccountSettings(Base):
 
 
 class Proxy(Base):
-    __tablename__ = 'proxy'
+    __tablename__ = 'proxies'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    proxy_value = Column(String(512), nullable=False)
+    proxy_value = Column(String(1024), nullable=False)
+    id_account = Column(Integer, ForeignKey('accounts.id'), nullable=True)
 
     def __init__(self, proxy_value: str):
         self.proxy_value = proxy_value
@@ -97,7 +97,8 @@ class Proxy(Base):
 class UserAgent(Base):
     __tablename__ = 'user_agents'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_agent_value = Column(String(), nullable=False)
+    user_agents_value = Column(String(), nullable=False)
+    accounts = relationship("Account", uselist=True, backref="user_agents")
 
-    def __init__(self, user_agent_value: str):
-        self.proxy_value = user_agent_value
+    def __init__(self, user_agents_value: str):
+        self.proxy_value = user_agents_value
