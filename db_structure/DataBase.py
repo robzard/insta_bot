@@ -5,8 +5,8 @@ from psycopg2 import Error
 from psycopg2._psycopg import connection, cursor
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
-from bot_worker.TypeTask import StatusTask
-from bot_worker.TypeTask import TypeTask as TypeTaskEnum
+from bot_worker.types_enum import StatusTask
+from bot_worker.types_enum import TypesTask as TypeTaskEnum
 from config import *
 
 from sqlalchemy.orm import sessionmaker, lazyload
@@ -14,7 +14,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Integer, create_engine, select, func, literal_column, extract, cast, TIMESTAMP, \
     and_, update
 from db_structure.tables import Base, Task, Status, Account, TypeAccount, TypeTask, AccountSettings, Proxy, UserAgent, \
-    Donor
+    Donor, UserData
 from sqlalchemy import select, func, distinct, extract, text
 from LogError import LogError
 
@@ -48,25 +48,11 @@ class db(object):
         create_database(self.is_bot)
         self.conn = f"postgresql+psycopg2://{PS_USER}:{PS_PASS}@{PS_HOST}:{PS_PORT}/{PS_DATABASE}"
         self.engine = create_engine(self.conn, encoding='UTF-8', echo=False)
-        # Base.metadata.drop_all(self.engine)  # удаление
+        #Base.metadata.drop_all(self.engine)  # удаление
         Base.metadata.create_all(self.engine)  # создание
         Session = sessionmaker(bind=self.engine)
         self.session = Session()
         self.add_data_on_creation()
-
-        # accounts = self.session.query(Account.id, func.count(Task.id)).outerjoin(self.session.query(
-        # Task.id).filter(Task.date_add > date).filter(Task.type_id == 1)).group_by(Account.id).all()#.having(
-        # func.count(Task.id) == 0).all() accounts = self.session.query(Account).select_from(Account).join(
-        # Task).filter(func.trunc(Task.date_add, date) > 12).all()  #.filter(extract('day', Task.date_add) < 3).all()
-
-        # a = self.session.query(Account).filter(func.count(Account.tasks) >= 1).all()
-        # Account.tasks.append()
-        # print("1")
-
-        # data: Account = self.session.query(Account).first()
-        # print(data.settings.source_accounts)
-        # for acc in data.scalars().all():
-        #     print(acc.settings.source_accounts)
 
     def add_data_on_creation(self):
         type_task: select = self.session.execute(select(TypeTask))
@@ -74,8 +60,8 @@ class db(object):
         type_account: select = self.session.execute(select(TypeTask))
         if type_task.raw.rowcount == 0:
             self.session.add(TypeTask(name="Выгрузить подписчиков"))
-            self.session.add(TypeTask(name="Проверка на бота"))
             self.session.add(TypeTask(name="Выгрузка информации аккаунта"))
+            self.session.add(TypeTask(name="Проверка на бота"))
         if status.raw.rowcount == 0:
             self.session.add(Status(name="Зарегистрированно"))
             self.session.add(Status(name="В работе"))
@@ -93,7 +79,7 @@ class db(object):
                 comment='-'))
             self.session.add(Account(
                 type_id=2,
-                username='bot',
+                username='4ch.bst',
                 password='Zima2021',
                 active=1,
                 work_now=0,
@@ -114,8 +100,8 @@ class db(object):
 
     def create_tasks(self, account: Account, source_accounts: list):
         for username in source_accounts:
-            task = Task(type_id=1,
-                        status_id=1,
+            task = Task(type_id=TypeTaskEnum.load_followers.value,
+                        status_id=StatusTask.registered.value,
                         username=username,
                         id_username_parent=account.id,
                         date_add=datetime.now())
@@ -188,3 +174,14 @@ class db(object):
         task.status_id = status.value
         self.session.commit()
 
+    def add_follower(self, user: UserData, task: Task):
+        task.follower_data.append(user)
+        self.session.commit()
+
+    def create_task_load_followers(self, username: str, id_username_parent: int):
+        self.session.add(Task(type_id=TypeTaskEnum.load_information.value,
+                              status_id=StatusTask.registered.value,
+                              username=username,
+                              id_username_parent=id_username_parent,
+                              date_add=datetime.now()))
+        self.session.commit()

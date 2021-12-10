@@ -1,5 +1,5 @@
 from db_structure.tables import *
-from TypeTask import *
+from types_enum import *
 from instagrapi import Client
 
 
@@ -30,7 +30,7 @@ class InstagramBot:
 
     def task_processing(self):
         self.inst_login()
-        if TypeTask.load_followers.value == self.task.type_id:
+        if TypesTask.load_followers.value == self.task.type_id:
             self.load_followers()
         # elif TypeTask.check_bot.value == self.task.type_id:
         #     check_bot()
@@ -47,8 +47,8 @@ class InstagramBot:
                                  user_id_profile=follower.pk,
                                  pic_url_profile=follower.profile_pic_url,
                                  username_donor=self.task.username)
-            self.task.follower_data.append(user_data)
-            self.db.session.commit()
+            self.db.add_follower(user_data, self.task)
+            self.db.create_task_load_followers(follower.username, self.task.id_username_parent)
 
     def get_id_username_donor(self):
         self.donor = self.db.get_donor_id(self.task.username)

@@ -1,10 +1,10 @@
 import enum
 
 
-class TypeTask(enum.Enum):
+class TypesTask(enum.Enum):
     load_followers = 1
-    check_bot = 2
-    load_information = 3
+    load_information = 2
+    check_bot = 3
 
 
 class RequestInstagram(enum.Enum):
