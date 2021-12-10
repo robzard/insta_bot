@@ -1,4 +1,4 @@
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, backref
 from sqlalchemy import ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Integer, create_engine, DateTime, Date, JSON
@@ -17,12 +17,12 @@ class Task(Base):
     date_end = Column(DateTime, nullable=True)
     id_docker_container = Column(Integer, nullable=True)
     username = Column(String(64), nullable=False)
-    id_instagram_data = Column(Integer, nullable=True)
     username_worker = Column(String(64), nullable=True)
     id_username_parent = Column(Integer, ForeignKey('accounts.id'), nullable=False)
     log_error = Column(String(), nullable=True)
 
-    follower_data = relationship("UserData", uselist=False, backref="instagram_data")
+    follower_data = relationship("UserData", backref="followers_data")
+
 
 
 class Account(Base):
@@ -103,21 +103,34 @@ class UserAgent(Base):
 
 
 class UserData(Base):
-    __tablename__ = 'instagram_data'
+    __tablename__ = 'followers_data'
     id = Column(Integer, primary_key=True, autoincrement=True)
     username = Column(String())
-    user_id_instagram = Column(Integer())
-    post_id_instagram = Column(Integer())
+    user_id_profile = Column(String())
+    post_id_profile = Column(String())
+    pic_url_profile = Column(String())
+    media_count_profile = Column(Integer())
+    follower_count_profile = Column(Integer())
+    following_count_profile = Column(Integer())
     username_donor = Column(String())
-    task_id = Column(Integer, ForeignKey('queue_tasks.id'))
+    task_id = Column(Integer, ForeignKey("queue_tasks.id"))
 
-    def __init__(self, username: str, user_id_instagram: int, post_id_instagram: int, username_donor: str,
-                 task_id: int):
+    def __init__(self, username: str = None,
+                 user_id_profile: str = None,
+                 post_id_profile: str = None,
+                 pic_url_profile: str = None,
+                 media_count_profile: int = None,
+                 follower_count_profile: int = None,
+                 following_count_profile: int = None,
+                 username_donor: str = None):
         self.username = username
-        self.user_id_instagram = user_id_instagram
-        self.post_id_instagram = post_id_instagram
+        self.user_id_profile = user_id_profile
+        self.post_id_instagram = post_id_profile
+        self.pic_url_profile = pic_url_profile
+        self.media_count_profile = media_count_profile
+        self.follower_count_profile = follower_count_profile
+        self.following_count_profile = following_count_profile
         self.username_donor = username_donor
-        self.task_id = task_id
 
 
 class Donor(Base):

@@ -11,6 +11,7 @@ class InstagramBot:
         self.task: Task
         self.cl: Client
         self.donor: Donor
+        self.count_load_followers: int = 10
 
     def get_bot_instagram(self):  # need work
         bot: Account = self.db.get_bot_account()
@@ -36,17 +37,25 @@ class InstagramBot:
         # elif TypeTask.load_information.value == self.task.type_id:
         #     load_information()
 
+        self.db.set_status_task(self.task, StatusTask.success)
+
     def load_followers(self):
         id_username_donor = self.get_id_username_donor()
-        
-        print('q')
+        followers = self.request_instagram(RequestInstagram.load_followers)
+        for follower in followers.values():
+            user_data = UserData(username=follower.username,
+                                 user_id_profile=follower.pk,
+                                 pic_url_profile=follower.profile_pic_url,
+                                 username_donor=self.task.username)
+            self.task.follower_data.append(user_data)
+            self.db.session.commit()
 
     def get_id_username_donor(self):
-        id_username_donor = self.db.get_donor_id(self.task.username)
-        if id_username_donor is None:
+        self.donor = self.db.get_donor_id(self.task.username)
+        if self.donor is None:
             id_username_donor = self.request_instagram(RequestInstagram.get_id_from_username)
-            self.db.insert_donor(self.task.username, id_username_donor)
-        return id_username_donor
+            self.donor = self.db.insert_donor(self.task.username, id_username_donor)
+        return self.donor.id_instagram
 
     def inst_login(self):
         settings = {'authorization_data': {'ds_user_id': '4100026187',
@@ -86,4 +95,4 @@ class InstagramBot:
         if type_request == RequestInstagram.get_id_from_username:
             return self.cl.user_id_from_username(self.task.username)
         elif type_request == RequestInstagram.load_followers:
-            pass  # need work
+            return self.cl.user_followers(user_id=self.donor.id_instagram, amount=self.count_load_followers, use_cache=False)

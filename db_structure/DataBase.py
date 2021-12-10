@@ -4,6 +4,9 @@ import psycopg2
 from psycopg2 import Error
 from psycopg2._psycopg import connection, cursor
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+
+from bot_worker.TypeTask import StatusTask
+from bot_worker.TypeTask import TypeTask as TypeTaskEnum
 from config import *
 
 from sqlalchemy.orm import sessionmaker, lazyload
@@ -162,11 +165,13 @@ class db(object):
         donor: Donor = self.session.query(Donor).filter(Donor.username == username).first()
         if donor is None:
             return None
-        return donor.id_instagram
+        return donor
 
     def insert_donor(self, username: str, id_username_donor: str):
-        self.session.add(Donor(username, id_username_donor))
+        donor: Donor = Donor(username, id_username_donor)
+        self.session.add(donor)
         self.session.commit()
+        return donor
 
     def plus_count_requests(self, bot: Account):
         bot.date_last_request = datetime.now()
@@ -175,3 +180,11 @@ class db(object):
         else:
             bot.count_requests = bot.count_requests + 1
         self.session.commit()
+
+    def set_status_task(self, task: Task, status: StatusTask, message: str = ""):
+        if status == StatusTask.error:
+            task.log_error = message
+        task.date_end = datetime.now()
+        task.status_id = status.value
+        self.session.commit()
+

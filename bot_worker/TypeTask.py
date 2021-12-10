@@ -10,3 +10,10 @@ class TypeTask(enum.Enum):
 class RequestInstagram(enum.Enum):
     get_id_from_username = 1
     load_followers = 2
+
+
+class StatusTask(enum.Enum):
+    registered = 1
+    in_work = 2
+    success = 3
+    error = 4
