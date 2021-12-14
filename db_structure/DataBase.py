@@ -132,7 +132,8 @@ class db(object):
         return user_agent
 
     def get_task(self, bot: Account):
-        task: Task = self.session.query(Task).with_for_update().filter(Task.status_id == 1).order_by(
+        task: Task = self.session.query(Task).with_for_update().filter(
+            and_(Task.type_id == 2, Task.status_id == 1)).order_by(
             func.random()).first()
         if task is not None:
             task.status_id = 2
@@ -179,9 +180,18 @@ class db(object):
         self.session.commit()
 
     def create_task_load_followers(self, username: str, id_username_parent: int):
-        self.session.add(Task(type_id=TypeTaskEnum.load_information.value,
-                              status_id=StatusTask.registered.value,
-                              username=username,
-                              id_username_parent=id_username_parent,
-                              date_add=datetime.now()))
+        task = Task(type_id=TypeTaskEnum.load_information.value,
+                    status_id=StatusTask.registered.value,
+                    username=username,
+                    id_username_parent=id_username_parent,
+                    date_add=datetime.now())
+        self.session.add(task)
+        self.session.commit()
+        return task
+
+    def update_follower_info(self, follower_info, follower_media_id: str, task: Task):
+        task.follower_data[0].media_count_profile = follower_info.media_count
+        task.follower_data[0].follower_count_profile = follower_info.follower_count
+        task.follower_data[0].following_count_profile = follower_info.following_count
+        task.follower_data[0].post_id_profile = follower_media_id
         self.session.commit()

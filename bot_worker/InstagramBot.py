@@ -32,10 +32,10 @@ class InstagramBot:
         self.inst_login()
         if TypesTask.load_followers.value == self.task.type_id:
             self.load_followers()
-        # elif TypeTask.check_bot.value == self.task.type_id:
+        elif TypesTask.load_information.value == self.task.type_id:
+            self.load_information()
+        # elif TypesTask.check_bot.value == self.task.type_id:
         #     check_bot()
-        # elif TypeTask.load_information.value == self.task.type_id:
-        #     load_information()
 
         self.db.set_status_task(self.task, StatusTask.success)
 
@@ -47,8 +47,16 @@ class InstagramBot:
                                  user_id_profile=follower.pk,
                                  pic_url_profile=follower.profile_pic_url,
                                  username_donor=self.task.username)
-            self.db.add_follower(user_data, self.task)
-            self.db.create_task_load_followers(follower.username, self.task.id_username_parent)
+            new_task = self.db.create_task_load_followers(follower.username, self.task.id_username_parent)
+            self.db.add_follower(user_data, new_task)
+
+    def load_information(self):
+        follower_info = self.request_instagram(RequestInstagram.load_info_follower)
+        if follower_info.media_count > 2:
+            follower_media_id: str = self.request_instagram(RequestInstagram.get_media_id)
+        else:
+            follower_media_id = ''
+        self.db.update_follower_info(follower_info, follower_media_id, self.task)
 
     def get_id_username_donor(self):
         self.donor = self.db.get_donor_id(self.task.username)
@@ -96,3 +104,8 @@ class InstagramBot:
             return self.cl.user_id_from_username(self.task.username)
         elif type_request == RequestInstagram.load_followers:
             return self.cl.user_followers(user_id=self.donor.id_instagram, amount=self.count_load_followers, use_cache=False)
+        elif type_request == RequestInstagram.load_info_follower:
+            return self.cl.user_info(self.task.follower_data[0].user_id_profile)
+        elif type_request == RequestInstagram.get_media_id:
+            return self.cl.user_medias(self.task.follower_data[0].user_id_profile, 4)[-1].id
+
