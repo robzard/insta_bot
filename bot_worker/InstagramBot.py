@@ -1,3 +1,6 @@
+import random
+import time
+
 from db_structure.tables import *
 from types_enum import *
 from instagrapi import Client
@@ -12,6 +15,8 @@ class InstagramBot:
         self.cl: Client
         self.donor: Donor
         self.count_load_followers: int = 10
+        self.start_sec = 5
+        self.end_sec = 15
 
     def get_bot_instagram(self):  # need work
         bot: Account = self.db.get_bot_account()
@@ -34,9 +39,6 @@ class InstagramBot:
             self.load_followers()
         elif TypesTask.load_information.value == self.task.type_id:
             self.load_information()
-        # elif TypesTask.check_bot.value == self.task.type_id:
-        #     check_bot()
-
         self.db.set_status_task(self.task, StatusTask.success)
 
     def load_followers(self):
@@ -57,6 +59,8 @@ class InstagramBot:
         else:
             follower_media_id = ''
         self.db.update_follower_info(follower_info, follower_media_id, self.task)
+        is_bot = self.check_is_bot()
+        self.db.set_bot_status(is_bot, self.task.follower_data[0])
 
     def get_id_username_donor(self):
         self.donor = self.db.get_donor_id(self.task.username)
@@ -101,11 +105,25 @@ class InstagramBot:
     def request_instagram(self, type_request: RequestInstagram):
         self.db.plus_count_requests(self.bot)
         if type_request == RequestInstagram.get_id_from_username:
-            return self.cl.user_id_from_username(self.task.username)
+            result = self.cl.user_id_from_username(self.task.username)
         elif type_request == RequestInstagram.load_followers:
-            return self.cl.user_followers(user_id=self.donor.id_instagram, amount=self.count_load_followers, use_cache=False)
+            result = self.cl.user_followers(user_id=self.donor.id_instagram, amount=self.count_load_followers, use_cache=False)
         elif type_request == RequestInstagram.load_info_follower:
-            return self.cl.user_info(self.task.follower_data[0].user_id_profile)
+            result = self.cl.user_info(self.task.follower_data[0].user_id_profile)
         elif type_request == RequestInstagram.get_media_id:
-            return self.cl.user_medias(self.task.follower_data[0].user_id_profile, 4)[-1].id
+            result = self.cl.user_medias(self.task.follower_data[0].user_id_profile, 4)[-1].id
+        time.sleep(random.randint(self.start_sec, self.end_sec))
+        return result
 
+    def check_is_bot(self):
+        follower: UserData = self.task.follower_data[0]
+        image_missing = '44884218_345707102882519_2446069589734326272' in follower.pic_url_profile
+        count_media = follower.media_count_profile < 3
+        if follower.follower_count_profile == 0: return True
+        following_procent = follower.following_count_profile / follower.follower_count_profile >= 2
+        if image_missing or count_media or following_procent:
+            if image_missing:
+                print('yeah')
+            return 1
+        else:
+            return 0

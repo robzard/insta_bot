@@ -195,3 +195,8 @@ class db(object):
         task.follower_data[0].following_count_profile = follower_info.following_count
         task.follower_data[0].post_id_profile = follower_media_id
         self.session.commit()
+
+    def set_bot_status(self, is_bot: int, follower: UserData):
+        follower.is_bot = is_bot
+        self.session.commit()
+

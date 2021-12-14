@@ -114,6 +114,7 @@ class UserData(Base):
     following_count_profile = Column(Integer())
     username_donor = Column(String())
     task_id = Column(Integer, ForeignKey("queue_tasks.id"))
+    is_bot = Column(Integer())
 
     def __init__(self, username: str = None,
                  user_id_profile: str = None,
