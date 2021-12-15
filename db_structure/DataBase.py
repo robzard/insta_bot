@@ -14,7 +14,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, String, Integer, create_engine, select, func, literal_column, extract, cast, TIMESTAMP, \
     and_, update
 from db_structure.tables import Base, Task, Status, Account, TypeAccount, TypeTask, AccountSettings, Proxy, UserAgent, \
-    Donor, UserData
+    Donor, UserData, LogErrorWrite
 from sqlalchemy import select, func, distinct, extract, text
 from LogError import LogError
 
@@ -48,7 +48,7 @@ class db(object):
         create_database(self.is_bot)
         self.conn = f"postgresql+psycopg2://{PS_USER}:{PS_PASS}@{PS_HOST}:{PS_PORT}/{PS_DATABASE}"
         self.engine = create_engine(self.conn, encoding='UTF-8', echo=False)
-        #Base.metadata.drop_all(self.engine)  # удаление
+        # Base.metadata.drop_all(self.engine)  # удаление
         Base.metadata.create_all(self.engine)  # создание
         Session = sessionmaker(bind=self.engine)
         self.session = Session()
@@ -83,6 +83,7 @@ class db(object):
                 password='Zima2021',
                 active=1,
                 work_now=0,
+                count_requests=0,
                 comment='-'))
             self.session.add(AccountSettings(id_account=1,
                                              source_accounts='4chan__tv;4chngirl;4chantv2.0;4changirl_ua;4chan_inc;4chtg;4ch.bitch;4chan.vid;4chantg'))
@@ -133,16 +134,18 @@ class db(object):
 
     def get_task(self, bot: Account):
         task: Task = self.session.query(Task).with_for_update().filter(
-            and_(Task.type_id == 2, Task.status_id == 1)).order_by(
+            and_(Task.status_id == 1)).order_by(
             func.random()).first()
         if task is not None:
             task.status_id = 2
             task.date_start = datetime.now()
             task.username_worker = bot.username
+            bot.work_now = 1
             self.session.commit()
             return task
         else:
-            self.bot.log_error("Отсутствуют задачи")
+            bot.log_error = "Отсутствуют задачи"
+            self.session.commit()
 
     # def log_error(self, type_error: LogError, message: str, obj: object):
     #     if type_error == LogError.out_of_proxies:
@@ -168,7 +171,7 @@ class db(object):
             bot.count_requests = bot.count_requests + 1
         self.session.commit()
 
-    def set_status_task(self, task: Task, status: StatusTask, message: str = ""):
+    def set_status_task(self, account: Account, task: Task, status: StatusTask, message: str = ""):
         if status == StatusTask.error:
             task.log_error = message
         task.date_end = datetime.now()
@@ -200,3 +203,16 @@ class db(object):
         follower.is_bot = is_bot
         self.session.commit()
 
+    def log_error(self, task: Task = None, account: Account = None, e: object = None, info=None):
+        if task is None:
+            task_id = None
+        else:
+            task_id = task.id
+        if account is None:
+            account_id = None
+        else:
+            account.active = 0
+            account_id = account.id
+        log_error = LogErrorWrite(task_id, account_id, info.filename, info.lineno, info.function, str(info.code_context), e.args[0], str(type(e)))
+        self.session.add(log_error)
+        self.session.commit()

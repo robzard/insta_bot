@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy.orm import sessionmaker, backref
 from sqlalchemy import ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
@@ -22,7 +24,6 @@ class Task(Base):
     log_error = Column(String(), nullable=True)
 
     follower_data = relationship("UserData", backref="followers_data")
-
 
 
 class Account(Base):
@@ -143,3 +144,37 @@ class Donor(Base):
     def __init__(self, username: str, id_instagram: str):
         self.username = username
         self.id_instagram = id_instagram
+
+
+class LogErrorWrite(Base):
+    __tablename__ = 'log_error'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    task_id = Column(Integer(), ForeignKey("queue_tasks.id"))
+    account_id = Column(Integer(), ForeignKey("accounts.id"))
+    filename = Column(String())
+    lineno = Column(Integer())
+    function = Column(String())
+    code_context = Column(String())
+    description = Column(String())
+    type_error = Column(String())
+    date_error = Column(DateTime())
+
+    def __init__(self,
+                 task_id: int = None,
+                 account_id: int = None,
+                 filename: str = "",
+                 lineno: int = None,
+                 function: str = None,
+                 code_context: str = None,
+                 description: str = None,
+                 type_error: str = None,
+                 date_error: datetime = datetime.now()):
+        self.task_id = task_id
+        self.account_id = account_id
+        self.filename = filename
+        self.lineno = lineno
+        self.function = function
+        self.code_context = code_context
+        self.description = description
+        self.type_error = type_error
+        self.date_error = date_error

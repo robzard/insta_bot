@@ -9,7 +9,7 @@ from instagrapi import Client
 class InstagramBot:
     def __init__(self, db_connection):
         self.db = db_connection
-        self.bot: Account = self.get_bot_instagram()
+        self.bot: Account
         self.check_data_account()
         self.task: Task
         self.cl: Client
@@ -19,27 +19,39 @@ class InstagramBot:
         self.end_sec = 15
 
     def get_bot_instagram(self):  # need work
-        bot: Account = self.db.get_bot_account()
-        return bot
+        self.bot: Account = self.db.get_bot_account()
+        if self.bot is None:
+            print(f'Бот для работки - отсутствует')
+            return False
+        print('Бот для обработки - id:', self.bot.id)
+        print(f'Count_requests - {self.bot.count_requests}')
+        return True
 
     def check_data_account(self):
-        if self.bot.proxy is None:
-            self.db.set_proxy(self.bot)
-        if self.bot.user_agent is None:
-            self.db.set_user_agent(self.bot)
+        if self.bot is not None:
+            if self.bot.proxy is None:
+                self.db.set_proxy(self.bot)
+            if self.bot.user_agent is None:
+                self.db.set_user_agent(self.bot)
 
     def get_next_task(self):
         task: Task = self.db.get_task(self.bot)
         self.task = task
-        return task
+        if task is not None:
+            print(f'Задача получена - id: {self.task.id}')
+            return True
+        else:
+            print(f'Задачи отсутствуют')
+            return False
 
     def task_processing(self):
-        self.inst_login()
         if TypesTask.load_followers.value == self.task.type_id:
+            print('load_followers')
             self.load_followers()
         elif TypesTask.load_information.value == self.task.type_id:
+            print('load_information')
             self.load_information()
-        self.db.set_status_task(self.task, StatusTask.success)
+        self.db.set_status_task(self.bot, self.task, StatusTask.success)
 
     def load_followers(self):
         id_username_donor = self.get_id_username_donor()
@@ -51,6 +63,7 @@ class InstagramBot:
                                  username_donor=self.task.username)
             new_task = self.db.create_task_load_followers(follower.username, self.task.id_username_parent)
             self.db.add_follower(user_data, new_task)
+            print('follower was registered - ', follower.username)
 
     def load_information(self):
         follower_info = self.request_instagram(RequestInstagram.load_info_follower)
@@ -61,6 +74,7 @@ class InstagramBot:
         self.db.update_follower_info(follower_info, follower_media_id, self.task)
         is_bot = self.check_is_bot()
         self.db.set_bot_status(is_bot, self.task.follower_data[0])
+        print('info was registered - ', follower_info.username)
 
     def get_id_username_donor(self):
         self.donor = self.db.get_donor_id(self.task.username)
@@ -98,20 +112,24 @@ class InstagramBot:
                               'request_id': 'd0b79970-a7cd-4063-85c3-4c02e9387138',
                               'tray_session_id': '62641269-d973-40f1-ad35-845668cb2cbb',
                               'uuid': '4f43dbb2-cfea-47c5-86a0-7e689bf3143c'}}
-
-        self.cl = Client(settings)  # (self.bot.user_agent.user_agents_value)
-        self.cl.login(self.bot.username, self.bot.password)
+        try:
+            self.cl = Client(settings)  # (self.bot.user_agent.user_agents_value)
+            self.cl.login(self.bot.username, self.bot.password)
+            print('Авторизация в instagram прошла успешно')
+        except Exception as ex:
+            print('Ошибка авторизации в instagram: ', ex)
 
     def request_instagram(self, type_request: RequestInstagram):
         self.db.plus_count_requests(self.bot)
         if type_request == RequestInstagram.get_id_from_username:
             result = self.cl.user_id_from_username(self.task.username)
         elif type_request == RequestInstagram.load_followers:
-            result = self.cl.user_followers(user_id=self.donor.id_instagram, amount=self.count_load_followers, use_cache=False)
+            result = self.cl.user_followers(user_id=self.donor.id_instagram, amount=self.count_load_followers,
+                                            use_cache=False)
         elif type_request == RequestInstagram.load_info_follower:
             result = self.cl.user_info(self.task.follower_data[0].user_id_profile)
         elif type_request == RequestInstagram.get_media_id:
-            result = self.cl.user_medias(self.task.follower_data[0].user_id_profile, 4)[-1].id
+            result = self.cl.user_medias(self.task.follower_data[0].user_id_profile, 3)[-1].id
         time.sleep(random.randint(self.start_sec, self.end_sec))
         return result
 
