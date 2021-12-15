@@ -10,7 +10,6 @@ class InstagramBot:
     def __init__(self, db_connection):
         self.db = db_connection
         self.bot: Account
-        self.check_data_account()
         self.task: Task
         self.cl: Client
         self.donor: Donor
@@ -21,8 +20,9 @@ class InstagramBot:
     def get_bot_instagram(self):  # need work
         self.bot: Account = self.db.get_bot_account()
         if self.bot is None:
-            print(f'Бот для работки - отсутствует')
+            print(f'Бот для обработки - отсутствует')
             return False
+        self.check_data_account()
         print('Бот для обработки - id:', self.bot.id)
         print(f'Count_requests - {self.bot.count_requests}')
         return True
@@ -33,9 +33,10 @@ class InstagramBot:
                 self.db.set_proxy(self.bot)
             if self.bot.user_agent is None:
                 self.db.set_user_agent(self.bot)
+            self.bot.log_error = None
 
-    def get_next_task(self):
-        task: Task = self.db.get_task(self.bot)
+    def get_next_task(self, id: int = None):
+        task: Task = self.db.get_task(self.bot, id)
         self.task = task
         if task is not None:
             print(f'Задача получена - id: {self.task.id}')
@@ -49,7 +50,7 @@ class InstagramBot:
             print('load_followers')
             self.load_followers()
         elif TypesTask.load_information.value == self.task.type_id:
-            print('load_information')
+            print('load_information - ', self.task.username)
             self.load_information()
         self.db.set_status_task(self.bot, self.task, StatusTask.success)
 
@@ -66,8 +67,10 @@ class InstagramBot:
             print('follower was registered - ', follower.username)
 
     def load_information(self):
+        print('Выгружаю информацию о пользователе')
         follower_info = self.request_instagram(RequestInstagram.load_info_follower)
-        if follower_info.media_count > 2:
+        if follower_info.media_count > 2 and follower_info.is_private == False:
+            print('Выгружаю медиа пользователя')
             follower_media_id: str = self.request_instagram(RequestInstagram.get_media_id)
         else:
             follower_media_id = ''
@@ -85,7 +88,6 @@ class InstagramBot:
 
     def inst_login(self):
         settings = {'authorization_data': {'ds_user_id': '4100026187',
-                                           'sessionid': '4100026187%3AeUmPZCd0NyJkYY%3A16',
                                            'should_use_header_over_cookies': True},
                     'cookies': {},
                     'country': 'RUS',
@@ -129,19 +131,22 @@ class InstagramBot:
         elif type_request == RequestInstagram.load_info_follower:
             result = self.cl.user_info(self.task.follower_data[0].user_id_profile)
         elif type_request == RequestInstagram.get_media_id:
-            result = self.cl.user_medias(self.task.follower_data[0].user_id_profile, 3)[-1].id
+            try:
+                result = self.cl.user_medias(self.task.follower_data[0].user_id_profile, 3)[-1].id
+            except IndexError:
+                result = self.cl.user_medias(self.task.follower_data[0].user_id_profile, 3)
+
         time.sleep(random.randint(self.start_sec, self.end_sec))
         return result
 
     def check_is_bot(self):
+        print('Проверка на бота')
         follower: UserData = self.task.follower_data[0]
         image_missing = '44884218_345707102882519_2446069589734326272' in follower.pic_url_profile
         count_media = follower.media_count_profile < 3
-        if follower.follower_count_profile == 0: return True
+        if follower.follower_count_profile == 0: return 1
         following_procent = follower.following_count_profile / follower.follower_count_profile >= 2
         if image_missing or count_media or following_procent:
-            if image_missing:
-                print('yeah')
             return 1
         else:
             return 0

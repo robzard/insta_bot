@@ -110,8 +110,9 @@ class db(object):
         self.session.commit()
 
     def get_bot_account(self):
-        return self.session.query(Account).filter(
-            and_(Account.type_id == 2, Account.work_now == 0, Account.active == 1)).first()
+        return self.session.query(Account).filter(Account.id == 2).first()
+        # return self.session.query(Account).filter(
+        #     and_(Account.type_id == 2, Account.work_now == 0, Account.active == 1)).first()
 
     def set_proxy(self, bot: Account):
         proxy: Proxy = self.session.query(Proxy).filter(Proxy.id_account == None).first()
@@ -132,10 +133,15 @@ class db(object):
             self.session.commit()
         return user_agent
 
-    def get_task(self, bot: Account):
-        task: Task = self.session.query(Task).with_for_update().filter(
-            and_(Task.status_id == 1)).order_by(
-            func.random()).first()
+    def get_task(self, bot: Account, id: int = None):
+        if id is not None:
+            task: Task = self.session.query(Task).with_for_update().filter(
+                and_(Task.id == id)).order_by(
+                func.random()).first()
+        else:
+            task: Task = self.session.query(Task).with_for_update().filter(
+                and_(Task.status_id == 1)).order_by(
+                func.random()).first()
         if task is not None:
             task.status_id = 2
             task.date_start = datetime.now()
@@ -213,6 +219,7 @@ class db(object):
         else:
             account.active = 0
             account_id = account.id
-        log_error = LogErrorWrite(task_id, account_id, info.filename, info.lineno, info.function, str(info.code_context), e.args[0], str(type(e)))
+        log_error = LogErrorWrite(task_id, account_id, info.filename, info.lineno, info.function,
+                                  str(info.code_context), e.args[0], str(type(e)))
         self.session.add(log_error)
         self.session.commit()
