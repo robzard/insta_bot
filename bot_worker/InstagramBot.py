@@ -1,5 +1,9 @@
+import inspect
 import random
 import time
+import traceback
+
+from instagrapi.exceptions import ClientNotFoundError
 
 from db_structure.tables import *
 from types_enum import *
@@ -14,8 +18,9 @@ class InstagramBot:
         self.cl: Client
         self.donor: Donor
         self.count_load_followers: int = 10
-        self.start_sec = 5
+        self.start_sec = 10
         self.end_sec = 15
+        self.count_requests = 200
 
     def get_bot_instagram(self):  # need work
         self.bot: Account = self.db.get_bot_account()
@@ -28,12 +33,11 @@ class InstagramBot:
         return True
 
     def check_data_account(self):
-        if self.bot is not None:
-            if self.bot.proxy is None:
-                self.db.set_proxy(self.bot)
-            if self.bot.user_agent is None:
-                self.db.set_user_agent(self.bot)
-            self.bot.log_error = None
+        if self.bot.proxy is None:
+            self.db.set_proxy(self.bot)
+        if self.bot.user_agent is None:
+            self.db.set_user_agent(self.bot)
+        self.bot.log_error = None
 
     def get_next_task(self, id: int = None):
         task: Task = self.db.get_task(self.bot, id)
@@ -47,24 +51,25 @@ class InstagramBot:
 
     def task_processing(self):
         if TypesTask.load_followers.value == self.task.type_id:
-            print('load_followers')
+            print('load_followers -', self.task.username)
             self.load_followers()
         elif TypesTask.load_information.value == self.task.type_id:
-            print('load_information - ', self.task.username)
+            print('load_information -', self.task.username)
             self.load_information()
         self.db.set_status_task(self.bot, self.task, StatusTask.success)
 
     def load_followers(self):
         id_username_donor = self.get_id_username_donor()
         followers = self.request_instagram(RequestInstagram.load_followers)
-        for follower in followers.values():
-            user_data = UserData(username=follower.username,
-                                 user_id_profile=follower.pk,
-                                 pic_url_profile=follower.profile_pic_url,
-                                 username_donor=self.task.username)
-            new_task = self.db.create_task_load_followers(follower.username, self.task.id_username_parent)
-            self.db.add_follower(user_data, new_task)
-            print('follower was registered - ', follower.username)
+        if len(followers) > 0:
+            for follower in followers.values():
+                user_data = UserData(username=follower.username,
+                                     user_id_profile=follower.pk,
+                                     pic_url_profile=follower.profile_pic_url,
+                                     username_donor=self.task.username)
+                new_task = self.db.create_task_load_followers(follower.username, self.task.id_username_parent)
+                self.db.add_follower(user_data, new_task)
+                print('follower was registered - ', follower.username)
 
     def load_information(self):
         print('Выгружаю информацию о пользователе')
@@ -102,7 +107,7 @@ class InstagramBot:
                                         'resolution': '1080x1920',
                                         'version_code': '301484483'},
                     'last_login': 1628691119.1710863,
-                    'locale': 'ru-RU',
+                    'locale': 'en-EN',
                     'timezone_offset': 10800,
                     'user_agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_3 like Mac OS X) AppleWebKit/605.1.15 ('
                                   'KHTML, like Gecko) Mobile/15E148 Instagram 123.0.0.24.115 (iPhone11,8; iOS 13_3; '
@@ -115,8 +120,13 @@ class InstagramBot:
                               'tray_session_id': '62641269-d973-40f1-ad35-845668cb2cbb',
                               'uuid': '4f43dbb2-cfea-47c5-86a0-7e689bf3143c'}}
         try:
-            self.cl = Client(settings)  # (self.bot.user_agent.user_agents_value)
+            self.cl = Client()  # (self.bot.user_agent.user_agents_value)
+            self.cl.load_settings('dump.json')
+            # self.cl.set_proxy('http://bwgtywas:nuv3htbw4lmd@209.127.191.180:9279')
+            # self.cl.set_user_agent('Mozilla/5.0 (iPhone; CPU iPhone OS 13_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 123.0.0.24.115 (iPhone11,8; iOS 13_3; en_US; en-US; scale=2.00; 828x1792; 188362626)')
             self.cl.login(self.bot.username, self.bot.password)
+            #self.cl.dump_settings('dump.json')
+            self.cl.request_timeout = 30
             print('Авторизация в instagram прошла успешно')
         except Exception as ex:
             print('Ошибка авторизации в instagram: ', ex)
@@ -126,8 +136,7 @@ class InstagramBot:
         if type_request == RequestInstagram.get_id_from_username:
             result = self.cl.user_id_from_username(self.task.username)
         elif type_request == RequestInstagram.load_followers:
-            result = self.cl.user_followers(user_id=self.donor.id_instagram, amount=self.count_load_followers,
-                                            use_cache=False)
+            result = self.cl.user_followers(user_id=self.donor.id_instagram, amount=self.count_load_followers)
         elif type_request == RequestInstagram.load_info_follower:
             result = self.cl.user_info(self.task.follower_data[0].user_id_profile)
         elif type_request == RequestInstagram.get_media_id:
@@ -150,3 +159,22 @@ class InstagramBot:
             return 1
         else:
             return 0
+
+    def tasks_working(self):
+        self.inst_login()
+        while self.bot.count_requests < self.count_requests:
+            if self.get_next_task():
+                try:
+                    self.task_processing()
+                except ClientNotFoundError:
+                    pass
+                except Exception as e:
+                    traceback.print_exc()
+                    info = inspect.trace()[-1]
+                    print(f"Возникла ошибка по задаче: {info}")
+                    self.db.log_error(self.task, self.bot, e, info)
+                    self.db.set_status_task(task=self.task, account=self.bot, status=StatusTask.error, message=e)
+                    continue
+            else:
+                break
+            print('-' * 10)

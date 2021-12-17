@@ -5,6 +5,7 @@ from psycopg2 import Error
 from psycopg2._psycopg import connection, cursor
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
+from ExceptionsInst import InstBotException
 from bot_worker.types_enum import StatusTask
 from bot_worker.types_enum import TypesTask as TypeTaskEnum
 from config import *
@@ -88,6 +89,7 @@ class db(object):
             self.session.add(AccountSettings(id_account=1,
                                              source_accounts='4chan__tv;4chngirl;4chantv2.0;4changirl_ua;4chan_inc;4chtg;4ch.bitch;4chan.vid;4chantg'))
             self.session.add(Proxy("123.123.123:213"))
+            self.session.add(UserAgent('qweqwe'))
         self.session.commit()
 
     def get_accounts_for_registration(self):
@@ -117,8 +119,8 @@ class db(object):
     def set_proxy(self, bot: Account):
         proxy: Proxy = self.session.query(Proxy).filter(Proxy.id_account == None).first()
         if proxy is None:
-            bot.log_error = f"PROXY: отсутствует прокси для бота"
-            self.session.commit()
+            self.bot_log_error("PROXY: отсутствует прокси для бота", bot)
+            raise InstBotException("PROXY: отсутствует прокси для бота")
         else:
             proxy.id_account = bot.id
             self.session.commit()
@@ -126,8 +128,8 @@ class db(object):
     def set_user_agent(self, bot: Account):
         user_agent: UserAgent = self.session.query(UserAgent).order_by(func.random()).first()
         if user_agent is None:
-            bot.log_error = "USERAGENT: отсутствует user_agent для бота"
-            self.session.commit()
+            self.bot_log_error("USERAGENT: отсутствует user_agent для бота", bot)
+            raise InstBotException("USERAGENT: отсутствует user_agent для бота")
         else:
             bot.user_agent_id = user_agent.id
             self.session.commit()
@@ -222,4 +224,10 @@ class db(object):
         log_error = LogErrorWrite(task_id, account_id, info.filename, info.lineno, info.function,
                                   str(info.code_context), e.args[0], str(type(e)))
         self.session.add(log_error)
+        self.session.commit()
+
+    def bot_log_error(self, message: str, bot: Account):
+        bot.log_error = message
+        bot.active = 0
+        bot.work_now = 0
         self.session.commit()
