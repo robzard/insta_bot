@@ -74,7 +74,7 @@ class InstagramBot:
     def load_information(self):
         print('Выгружаю информацию о пользователе')
         follower_info = self.request_instagram(RequestInstagram.load_info_follower)
-        if follower_info.media_count > 2 and follower_info.is_private == False:
+        if follower_info.media_count != 0 and follower_info.is_private == False:
             print('Выгружаю медиа пользователя')
             follower_media_id: str = self.request_instagram(RequestInstagram.get_media_id)
         else:
@@ -126,7 +126,7 @@ class InstagramBot:
             # self.cl.set_user_agent('Mozilla/5.0 (iPhone; CPU iPhone OS 13_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 123.0.0.24.115 (iPhone11,8; iOS 13_3; en_US; en-US; scale=2.00; 828x1792; 188362626)')
             self.cl.login(self.bot.username, self.bot.password)
             #self.cl.dump_settings('dump.json')
-            self.cl.request_timeout = 30
+            #self.cl.request_timeout = 30
             print('Авторизация в instagram прошла успешно')
         except Exception as ex:
             print('Ошибка авторизации в instagram: ', ex)
@@ -152,9 +152,9 @@ class InstagramBot:
         print('Проверка на бота')
         follower: UserData = self.task.follower_data[0]
         image_missing = '44884218_345707102882519_2446069589734326272' in follower.pic_url_profile
-        count_media = follower.media_count_profile < 3
+        count_media = follower.media_count_profile < 1
         if follower.follower_count_profile == 0: return 1
-        following_procent = follower.following_count_profile / follower.follower_count_profile >= 2
+        following_procent = follower.following_count_profile / follower.follower_count_profile >= 4
         if image_missing or count_media or following_procent:
             return 1
         else:
@@ -172,7 +172,7 @@ class InstagramBot:
                     traceback.print_exc()
                     info = inspect.trace()[-1]
                     print(f"Возникла ошибка по задаче: {info}")
-                    self.db.log_error(self.task, self.bot, e, info)
+                    self.db.log_error(self.task, self.bot, e, info, 1)
                     self.db.set_status_task(task=self.task, account=self.bot, status=StatusTask.error, message=e)
                     continue
             else:

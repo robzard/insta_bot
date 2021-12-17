@@ -18,6 +18,7 @@ if __name__ == '__main__':
     try:
         if bot.get_bot_instagram():
             bot.tasks_working()
+            print('q')
     except InstBotException:
         pass
     except Exception as e:
@@ -28,4 +29,5 @@ if __name__ == '__main__':
     finally:
         if bot.bot is not None:
             bot.bot.work_now = 0
+            bot.db.session.commit()
     print('End')

@@ -211,7 +211,7 @@ class db(object):
         follower.is_bot = is_bot
         self.session.commit()
 
-    def log_error(self, task: Task = None, account: Account = None, e: object = None, info=None):
+    def log_error(self, task: Task = None, account: Account = None, e: object = None, info=None, active: int = 0):
         if task is None:
             task_id = None
         else:
@@ -219,7 +219,7 @@ class db(object):
         if account is None:
             account_id = None
         else:
-            account.active = 0
+            account.active = active
             account_id = account.id
         log_error = LogErrorWrite(task_id, account_id, info.filename, info.lineno, info.function,
                                   str(info.code_context), e.args[0], str(type(e)))
