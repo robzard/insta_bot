@@ -18,7 +18,6 @@ if __name__ == '__main__':
     try:
         if bot.get_bot_instagram():
             bot.tasks_working()
-            print('q')
     except InstBotException:
         pass
     except Exception as e:

@@ -120,13 +120,26 @@ class InstagramBot:
                               'tray_session_id': '62641269-d973-40f1-ad35-845668cb2cbb',
                               'uuid': '4f43dbb2-cfea-47c5-86a0-7e689bf3143c'}}
         try:
-            self.cl = Client()  # (self.bot.user_agent.user_agents_value)
-            self.cl.load_settings('dump.json')
-            # self.cl.set_proxy('http://bwgtywas:nuv3htbw4lmd@209.127.191.180:9279')
-            # self.cl.set_user_agent('Mozilla/5.0 (iPhone; CPU iPhone OS 13_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Instagram 123.0.0.24.115 (iPhone11,8; iOS 13_3; en_US; en-US; scale=2.00; 828x1792; 188362626)')
-            self.cl.login(self.bot.username, self.bot.password)
-            #self.cl.dump_settings('dump.json')
-            #self.cl.request_timeout = 30
+            if self.bot.settings_json is None:
+                self.cl = Client()
+                # self.cl.load_settings('dump.json')
+                # self.cl.set_proxy(self.bot.proxy.proxy_value)
+                self.cl.login(self.bot.username, self.bot.password)
+                self.bot.settings_json = self.cl.get_settings()
+                self.db.session.commit()
+            else:
+                self.cl = Client(self.bot.settings_json)
+                self.cl.login(self.bot.username, self.bot.password)
+                # self.cl.set_proxy('http://bwgtywas:nuv3htbw4lmd@209.127.191.180:9279')
+                # self.cl.set_user_agent(
+                #     'Mozilla/5.0 (iPhone; CPU iPhone OS 13_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) '
+                #     'Mobile/15E148 Instagram 123.0.0.24.115 (iPhone11,8; iOS 13_3; en_US; en-US; scale=2.00; 828x1792; '
+                #     '188362626)')
+                # self.cl.settings.update()
+                # self.cl.dump_settings('dump.json')
+            # self.cl.request_timeout = 30
+            a = self.cl.get_timeline_feed()
+            print(a['status'])
             print('Авторизация в instagram прошла успешно')
         except Exception as ex:
             print('Ошибка авторизации в instagram: ', ex)

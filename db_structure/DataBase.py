@@ -49,7 +49,7 @@ class db(object):
         create_database(self.is_bot)
         self.conn = f"postgresql+psycopg2://{PS_USER}:{PS_PASS}@{PS_HOST}:{PS_PORT}/{PS_DATABASE}"
         self.engine = create_engine(self.conn, encoding='UTF-8', echo=False)
-        # Base.metadata.drop_all(self.engine)  # удаление
+        #Base.metadata.drop_all(self.engine)  # удаление
         Base.metadata.create_all(self.engine)  # создание
         Session = sessionmaker(bind=self.engine)
         self.session = Session()

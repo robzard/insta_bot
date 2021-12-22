@@ -39,6 +39,7 @@ class Account(Base):
     user_agent_id = Column(Integer, ForeignKey('user_agents.id'), nullable=True)
     count_requests = Column(Integer, nullable=True)
     date_last_request = Column(DateTime, nullable=True)
+    settings_json = Column(JSON())
 
     account_settings = relationship("AccountSettings", uselist=False, backref="accounts")
     tasks = relationship("Task", uselist=True, backref="accounts", lazy="dynamic")
