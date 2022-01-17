@@ -17,7 +17,7 @@ class InstagramBot:
         self.task: Task
         self.cl: Client
         self.donor: Donor
-        self.count_load_followers: int = 10
+        self.count_load_followers: int = 100
         self.start_sec = 10
         self.end_sec = 15
         self.count_requests = 200
@@ -92,8 +92,7 @@ class InstagramBot:
         return self.donor.id_instagram
 
     def inst_login(self):
-        settings = {'authorization_data': {'ds_user_id': '4100026187',
-                                           'should_use_header_over_cookies': True},
+        settings = {'authorization_data': {},
                     'cookies': {},
                     'country': 'RUS',
                     'device_settings': {'android_release': '8.0.0',
@@ -107,28 +106,25 @@ class InstagramBot:
                                         'resolution': '1080x1920',
                                         'version_code': '301484483'},
                     'last_login': 1628691119.1710863,
-                    'locale': 'en-EN',
+                    'locale': 'ru-RU',
                     'timezone_offset': 10800,
-                    'user_agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_3 like Mac OS X) AppleWebKit/605.1.15 ('
-                                  'KHTML, like Gecko) Mobile/15E148 Instagram 123.0.0.24.115 (iPhone11,8; iOS 13_3; '
-                                  'en_US; en-US; scale=2.00; 828x1792; 188362626)',
-                    'uuids': {'advertising_id': '1e71a894-5b2b-49d5-b32d-70ce8000f1cf',
-                              'android_device_id': 'android-4c96d0f34ff79043',
-                              'client_session_id': '22ce0e00-0574-434e-b6c2-5a8f979e2065',
-                              'phone_id': 'edd18389-4c18-4227-884d-c03db9a91749',
-                              'request_id': 'd0b79970-a7cd-4063-85c3-4c02e9387138',
-                              'tray_session_id': '62641269-d973-40f1-ad35-845668cb2cbb',
-                              'uuid': '4f43dbb2-cfea-47c5-86a0-7e689bf3143c'}}
+                    'user_agent': 'Instagram 194.0.0.36.172 Android (26/8.0.0; 480dpi; 1080x1920; Xiaomi; MI 5s; capricorn; qcom; ru-RU; 301484483)',
+                    'uuids': {}}
         try:
             if self.bot.settings_json is None:
-                self.cl = Client()
+                self.cl = Client(settings)
                 # self.cl.load_settings('dump.json')
                 # self.cl.set_proxy(self.bot.proxy.proxy_value)
+                self.cl.set_locale('ru_RU')
+                self.cl.set_country_code(7)
+                self.cl.set_timezone_offset(3 * 3600)
+                self.cl.set_proxy(self.bot.proxy.proxy_value)
                 self.cl.login(self.bot.username, self.bot.password)
                 self.bot.settings_json = self.cl.get_settings()
                 self.db.session.commit()
             else:
                 self.cl = Client(self.bot.settings_json)
+                self.cl.set_proxy(self.bot.proxy.proxy_value)
                 self.cl.login(self.bot.username, self.bot.password)
                 # self.cl.set_proxy('http://bwgtywas:nuv3htbw4lmd@209.127.191.180:9279')
                 # self.cl.set_user_agent(
@@ -138,10 +134,11 @@ class InstagramBot:
                 # self.cl.settings.update()
                 # self.cl.dump_settings('dump.json')
             # self.cl.request_timeout = 30
-            a = self.cl.get_timeline_feed()
-            print(a['status'])
+            check_session = self.cl.get_timeline_feed()
+            print(check_session['status'])
             print('Авторизация в instagram прошла успешно')
         except Exception as ex:
+            traceback.print_exc()
             print('Ошибка авторизации в instagram: ', ex)
 
     def request_instagram(self, type_request: RequestInstagram):

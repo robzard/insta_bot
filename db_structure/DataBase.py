@@ -80,15 +80,33 @@ class db(object):
                 comment='-'))
             self.session.add(Account(
                 type_id=2,
-                username='4ch.bst',
-                password='Zima2021',
+                username='kani_0650',
+                password='veri05',
+                active=1,
+                work_now=0,
+                count_requests=0,
+                comment='-'))
+            self.session.add(Account(
+                type_id=2,
+                username='sam1ra_009',
+                password='samira',
+                active=1,
+                work_now=0,
+                count_requests=0,
+                comment='-'))
+            self.session.add(Account(
+                type_id=2,
+                username='aik.215',
+                password='asa592',
                 active=1,
                 work_now=0,
                 count_requests=0,
                 comment='-'))
             self.session.add(AccountSettings(id_account=1,
                                              source_accounts='4chan__tv;4chngirl;4chantv2.0;4changirl_ua;4chan_inc;4chtg;4ch.bitch;4chan.vid;4chantg'))
-            self.session.add(Proxy("123.123.123:213"))
+            self.session.add(Proxy("http://insta361340:Qiya4543SB@185.156.178.105:4316"))
+            self.session.add(Proxy("http://insta361340:Qiya4543SB@185.156.178.105:4317"))
+            self.session.add(Proxy("http://insta361340:Qiya4543SB@185.156.178.105:4318"))
             self.session.add(UserAgent('qweqwe'))
         self.session.commit()
 
@@ -112,7 +130,7 @@ class db(object):
         self.session.commit()
 
     def get_bot_account(self):
-        return self.session.query(Account).filter(Account.id == 2).first()
+        return self.session.query(Account).filter(Account.id == 3).first()
         # return self.session.query(Account).filter(
         #     and_(Account.type_id == 2, Account.work_now == 0, Account.active == 1)).first()
 
