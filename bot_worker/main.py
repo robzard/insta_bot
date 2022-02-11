@@ -1,15 +1,9 @@
-import sys
 import traceback
-import requests
-from instagrapi.exceptions import ClientLoginRequired
 from ExceptionsInst import InstBotException
 from bot_worker.InstagramBot import InstagramBot
-from bot_worker.types_enum import StatusTask
-from db_structure import DataBase
 from db_structure.DataBase import db
 import inspect
-from db_structure.tables import Account
-
+import time
 
 if __name__ == '__main__':
     print('Start')
