@@ -249,3 +249,6 @@ class db(object):
         bot.active = 0
         bot.work_now = 0
         self.session.commit()
+
+    def get_count_tasks(self):
+        return self.session.query(Task).filter(Task.status_id == 1).count()
